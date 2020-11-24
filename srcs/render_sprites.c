@@ -1,0 +1,171 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   render_sprites.c                                   :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: larosale <larosale@42.fr>                  +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2020/08/25 12:22:33 by larosale          #+#    #+#             */
+/*   Updated: 2020/08/28 14:13:24 by larosale         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#include "engine.h"
+
+/*
+** Parses the map to find all sprites (designated by "2" value).
+** Saves their location, texture and initial distance to the player to the
+** linked list of structures, which is then returned.
+** Returns NULL on error.
+*/
+
+t_list		*parse_sprites(t_all *a, t_file *f)
+{
+	t_list		*s;
+	t_list		*sprite;
+	t_sprite	*spr;
+	int			i;
+
+	i = -1;
+	s = NULL;
+	while ((a->m->map)[++i] != -2)
+	{
+		if ((a->m->map)[i] == 2)
+		{
+			if (!(spr = ft_calloc(1, sizeof(t_sprite))) && !destroy_spr(spr, s))
+				return (cleanup(ERR_SYS, a, f));
+			spr->spr_x = (double)(i / a->m->map_width) + 0.5;
+			spr->spr_y = (double)(i % a->m->map_width) + 0.5;
+			spr->spr_tex = a->tspr;
+			spr->spr_dist = (a->m->pos_x - spr->spr_x) * (a->m->pos_x -
+				spr->spr_x) + (a->m->pos_y - spr->spr_y) *
+				(a->m->pos_y - spr->spr_y);
+			if (!(sprite = ft_lstnew(spr)) && !destroy_spr(spr, s))
+				return (cleanup(ERR_SYS, a, f));
+			ft_lstadd_back(&s, sprite);
+		}
+	}
+	return (s);
+}
+
+/*
+** Sorts the linked list "sprites" so that the most distant ones come
+** first.
+*/
+
+static void	sort_sprites(t_list *sprites)
+{
+	void	*a;
+	t_list	*temp1;
+	t_list	*temp2;
+
+	temp1 = sprites;
+	while (temp1)
+	{
+		temp2 = temp1->next;
+		while (temp2)
+		{
+			if (((t_sprite *)temp2->content)->spr_dist >
+				((t_sprite *)temp1->content)->spr_dist)
+			{
+				a = temp1->content;
+				temp1->content = temp2->content;
+				temp2->content = a;
+			}
+			temp2 = temp2->next;
+		}
+		temp1 = temp1->next;
+	}
+	return ;
+}
+
+/*
+** Calculates the parameters necessary for sprite rendering.
+*/
+
+static void	calc_sprite(t_sprite *spr, t_all *a)
+{
+	double	inv_det;
+
+	spr->spr_dist = (a->m->pos_x - spr->spr_x) * (a->m->pos_x - spr->spr_x) +
+			(a->m->pos_y - spr->spr_y) * (a->m->pos_y - spr->spr_y);
+	spr->spr_r_x = spr->spr_x - a->m->pos_x;
+	spr->spr_r_y = spr->spr_y - a->m->pos_y;
+	inv_det = 1.0 / (a->m->plane_x * a->m->dir_y - a->m->dir_x * a->m->plane_y);
+	spr->spr_t_x = inv_det * (a->m->dir_y * spr->spr_r_x -
+		a->m->dir_x * spr->spr_r_y);
+	spr->spr_t_y = inv_det * (-(a->m->plane_y) * spr->spr_r_x +
+		a->m->plane_x * spr->spr_r_y);
+	spr->screen_x = (int)(a->w->win_width / 2 * (1 + spr->spr_t_x /
+		spr->spr_t_y));
+	spr->spr_height = abs((int)(a->w->win_height / spr->spr_t_y));
+	spr->draw_start_y = -spr->spr_height / 2 + a->w->win_height / 2;
+	spr->draw_start_y < 0 ? spr->draw_start_y = 0 : 0;
+	spr->draw_end_y = spr->spr_height / 2 + a->w->win_height / 2;
+	spr->draw_end_y >= a->w->win_height ?
+		spr->draw_end_y = a->w->win_height - 1 : 0;
+	spr->spr_width = abs((int)(a->w->win_height / spr->spr_t_y));
+	spr->draw_start_x = -spr->spr_width / 2 + spr->screen_x;
+	spr->draw_start_x < 0 ? spr->draw_start_x = 0 : 0;
+	spr->draw_end_x = spr->spr_width / 2 + spr->screen_x;
+	spr->draw_end_x >= a->w->win_width ?
+		spr->draw_end_x = a->w->win_width - 1 : 0;
+}
+
+/*
+** Renders the sprite using pre-calculated parameters saved in "spr" structure.
+** Black pixels on sprite texture are not rendered ("transparent").
+*/
+
+static void	render_sprite(t_sprite *spr, t_all *a, t_frame *f)
+{
+	int				v_stripe;
+	int				y;
+	int				d;
+	unsigned int	color;
+
+	v_stripe = spr->draw_start_x - 1;
+	while (++v_stripe < spr->draw_end_x)
+	{
+		spr->tex_x = (int)(256 * (v_stripe - (-spr->spr_width / 2 +
+			spr->screen_x)) * a->tspr->img_width / spr->spr_width) / 256;
+		if (spr->spr_t_y > 0 && v_stripe > 0 && v_stripe < a->w->win_width &&
+			spr->spr_t_y < *(f->z_buf + v_stripe))
+		{
+			y = spr->draw_start_y - 1;
+			while (++y < spr->draw_end_y)
+			{
+				d = y * 256 - a->w->win_height * 128 + spr->spr_height * 128;
+				spr->tex_y = (d * a->tspr->img_height / spr->spr_height) / 256;
+				color = *(unsigned int *)(a->tspr->img_addr + spr->tex_y *
+					a->tspr->img_line_size + spr->tex_x * a->tspr->img_bpp / 8);
+				a->m->shading ? color_shading(&color, sqrt(spr->spr_dist)) : 0;
+				color & 0x00FFFFFF ? pixel_put(a->i, v_stripe, y, color) : 0;
+			}
+		}
+	}
+}
+
+/*
+** Renders sprites, using the list ("a->spr_list"), generated by parsing
+** function "parse_sprites" (called in "define_all" function).
+** The list is first sorted, so as the most distant sprite is first.
+** Then the necessary parameters are calculated and the sprite is rendered.
+*/
+
+void		render_sprites(t_all *a, t_frame *f)
+{
+	t_sprite	*spr;
+	t_list		*temp;
+
+	temp = a->spr_list;
+	sort_sprites(a->spr_list);
+	while (temp)
+	{
+		spr = (t_sprite *)(temp->content);
+		calc_sprite(spr, a);
+		render_sprite(spr, a, f);
+		temp = temp->next;
+	}
+	return ;
+}

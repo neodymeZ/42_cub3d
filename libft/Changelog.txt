@@ -1,0 +1,27 @@
+v1.0:
+
+Moulinette tests failed on ft_split (segfault)
+
+v1.1:
+
+1) Removed input parameter check for ft_split on delimiter symbol to 
+avoid segfault in test: ft_split(string, '\0')
+
+MOULINETTE PASSED
+
+v1.2:
+
+1) Added custom ft_realloc function from get_next_line project
+2) Edited Make to only add the changed object files to the library
+3) Edited Make to avoid re-adding bonus functions to the library on each run
+4) Edited Make to track include dependencies (recompile source files if the
+header file changes, but only for the source files where it is included)
+5) Fixed ft_split memory allocation bug
+6) Modified ft_substr to only allocate memory needed for substring (not "len" + 1 bytes,
+as before)
+7) Added custom ft_charstr, ft_strpad, ft_strconv, ft_itoa_base, ft_memprint, ft_dtoa and other functions from ft_printf project
+
+v1.3:
+
+1) Added ft_math_arclen and ft_absd functions for Cub3D project
+2) Added get_next_line

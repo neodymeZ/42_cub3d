@@ -1,0 +1,17 @@
+R 640 480
+
+NO ./textures/64/Stone1.xpm
+SO ./textures/64/Orange1.xpm  
+WE ./textures/64/BR1.xpm
+EA ./textures/64/Grey1.xpm
+
+S ./textures/256/Sprite.xpm
+
+F 30,30,30 
+C 70,70,70
+
+111111
+100101
+102001
+1100N1
+111111
