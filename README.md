@@ -8,7 +8,7 @@ A simple raycasting experiment
 
 This project demonstrates how a Wolfenstein 3D era raycasting technique allows to build a pseudo-3D environment.
 
-It uses libft and minilibx libraries (included).
+It uses [libft](https://github.com/neodymeZ/42_libft) and [minilibx](https://github.com/pbondoer/MinilibX) libraries (included).
 
 The algorithmic design is based on this tutorial: https://lodev.org/cgtutor/raycasting.html
 
