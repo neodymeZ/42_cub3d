@@ -2,6 +2,8 @@
 
 A simple raycasting experiment
 
+*NB: Code is dense due to 42 styling rules (25 lines per function, 5 functions per file, etc).*
+
 ## Description
 
 This project demonstrates how a Wolfenstein 3D era raycasting technique allows to build a pseudo-3D environment.
